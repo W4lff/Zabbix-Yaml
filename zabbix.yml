@@ -1,0 +1,122 @@
+version: '3.8'
+services:
+  zabbix-snmptraps:
+    image: zabbix/zabbix-snmptraps:centos-4.4.8
+    comannd: cat >> [hade]
+    restart: unless-stopped
+    ports:
+      - 162:1162/udp
+    volumes:
+      - /zabbix/zabbix-snmptraps/zbx_instance/snmptraps:/var/lib/zabbix/snmptraps:rw
+      - /zabbix/zabbix-snmptraps/var/lib/zabbix/mibs:/usr/share/snmp/mibs:ro
+      - /zabbix/zabbix-snmptraps/var/lib/zabbix/mibs:/var/lib/zabbix/mibs
+    networks:
+      zabbix-network:
+  zabbix-server-pgsql:
+    image: zabbix/zabbix-server-pgsql:centos-4.4.8
+    environment:
+      - DB_SERVER_HOST=10.10.1.25
+      - POSTGRES_USER=zabbix
+      - POSTGRES_PASSWORD=Xe<bLKb!
+      - POSTGRES_DB=zabbix_db
+      - ZBX_ENABLE_SNMP_TRAPS=true
+      - ZBX_CACHESIZE=1G
+      - ZBX_STARTDBSYNCERS=10
+      - ZBX_HISTORYCACHESIZE=1G
+      - ZBX_TRENDCACHESIZE=512M
+      - ZBX_VALUECACHESIZE=512M
+      - ZBX_STARTPOLLERS=50
+      - ZBX_STARTPREPROCESSORS=10
+      - ZBX_STARTPOLLERSUNREACHABLE=25
+      - ZBX_STARTPINGERS=25
+      - ZBX_STARTDISCOVERERS=5
+      - ZBX_STARTHTTPPOLLERS=25
+      - ZBX_STARTTIMERS=15
+      - ZBX_HOUSEKEEPINGFREQUENCY=12
+      - ZBX_MAXHOUSEKEEPERDELETE=1000
+      - ZBX_TIMEOUT=30
+      - ZBX_UNREACHABLEPERIOD=45
+      - ZBX_UNAVAILABLEDELAY=60
+      - ZBX_UNREACHABLEDELAY=15
+      - ZBX_LOGSLOWQUERIES=3000
+      - ZBX_STARTPROXYPOLLERS=10
+      - ZBX_STATSALLOWEDIP=127.0.0.1
+    restart: unless-stopped
+    ports:
+      - 10051:10051
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /zabbix-server-pgsql/usr/lib/zabbix/alertscripts:/usr/lib/zabbix/alertscripts:ro
+      - /zabbix-server-pgsql/usr/lib/zabbix/externalscripts:/usr/lib/zabbix/externalscripts:ro
+      - /zabbix-server-pgsql/var/lib/zabbix/export:/var/lib/zabbix/export:rw
+      - /zabbix-server-pgsql/var/lib/zabbix/modules:/var/lib/zabbix/modules:ro
+      - /zabbix-server-pgsql/var/lib/zabbix/enc:/var/lib/zabbix/enc:ro
+      - /zabbix-server-pgsql/var/lib/zabbix/ssh_keys:/var/lib/zabbix/ssh_keys:ro
+      - /zabbix-server-pgsql/var/lib/zabbix/mibs:/var/lib/zabbix/mibs:ro
+      - /zabbix-server-pgsql/var/lib/zabbix/ssl/certs:/var/lib/zabbix/ssl/certs
+      - /zabbix-server-pgsql/var/lib/zabbix/ssl/keys:/var/lib/zabbix/ssl/keys
+      - /zabbix-server-pgsql/var/lib/zabbix/ssl/ssl_ca:/var/lib/zabbix/ssl/ssl_ca
+      - /zabbix-snmptraps/zbx_instance/snmptraps:/var/lib/zabbix/snmptraps:rw
+      - /zabbix-snmptraps/var/lib/zabbix/mibs:/usr/share/snmp/mibs:ro
+      - ./config/odbc.ini:/etc/odbc.ini:ro
+    links:
+      - zabbix-server-pgsql
+    networks:
+      zabbix-network:
+
+  zabbix-web-nginx-pgsql:
+    image: zabbix/zabbix-web-nginx-pgsql:centos-4.4.8
+    restart: unless-stopped
+    ports:
+      - 443:8443
+      - 80:8080
+    environment:
+      - PHP_TZ=America/Sao_Paulo
+      - /etc/localtime:/etc/localtime:ro
+      - ZBX_SERVER_NAME=ITM-ZBBX
+      - ZBX_SERVER_HOST=zabbix-server-pgsql
+      - DB_SERVER_HOST=10.10.1.25
+      - POSTGRES_USER=zabbix
+      - POSTGRES_PASSWORD=Xe<bLKb!
+      - POSTGRES_DB=zabbix_db
+    volumes:
+      - /zabbix-web-nginx/etc/ssl/nginx:/etc/ssl/nginx:ro
+      - /zabbix-web-nginx/usr/share/zabbix/modules:/usr/share/zabbix/modules
+    links:
+      - zabbix-server-pgsql
+    networks:
+      zabbix-network:
+
+  zabbix-web-apache-pgsql:
+    image: zabbix/zabbix-web-apache-pgsql:centos-4.4.8
+    restart: unless-stopped
+    ports:
+      - 1443:8443
+      - 180:8080
+    environment:
+      - PHP_TZ=America/Sao_Paulo
+      - /etc/localtime:/etc/localtime:ro
+      - ZBX_SERVER_NAME=ITM-ZBBX
+      - ZBX_SERVER_HOST=zabbix-server-pgsql
+      - DB_SERVER_HOST=10.10.1.25
+      - POSTGRES_USER=zabbix
+      - POSTGRES_PASSWORD=Xe<bLKb!
+      - POSTGRES_DB=zabbix_db
+
+    networks:
+      zabbix-network:
+  realcafe-agent:
+    image: zabbix/zabbix-agent:latest
+    restart: unless-stopped
+    ports:
+      - 10050:10050
+    environment:
+      - ZBX_SERVER_HOST=zabbix-server-pgsql
+      - ZBX_HOSTNAME=Zabbix server
+      - ZBX_LOGREMOTECOMMANDS=1
+    volumes:
+      - /zabbix-agent/var/lib/zabbix/enc:/var/lib/zabbix/enc
+      - /zabbix-agent/var/lib/zabbix/modules:/var/lib/zabbix/modules
+      - /zabbix-agent/etc/zabbix/zabbix_agentd.d:/etc/zabbix/zabbix_agentd.d
+    networks:
+      zabbix-network:

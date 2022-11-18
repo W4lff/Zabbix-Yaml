@@ -1,0 +1,85 @@
+version: '3.8'
+services:
+  mysql:
+    container_name: mysql
+    image: mysql:5.7
+#    networks:
+#      - network-zabbix
+    ports:
+      - '3306:3306'
+    volumes:
+      - /mysql/mysql:/var/lib/data'
+      - /mysql/custom:/etc/mysql/conf.d
+    environment:
+      - MYSQL_ROOT_PASSWORD=carryontech
+      - MYSQL_DATABASE=zabbix
+      - MYSQL_USER=zabbix
+      - MYSQL_PASSWORD=carryontech
+
+  zabbix-proxy:
+    container_name: zabbix-proxy
+    image: zabbix/zabbix-proxy-mysql:latest
+ #   networks:
+ #     - network-zabbix
+    links:
+      - mysql
+    restart: always
+    ports:
+      - '10051:10051'
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /zabbix-proxy/usr/lib/zabbix/alertscripts:/usr/lib/zabbix/alertscripts:ro
+      - /zabbix-proxy/usr/lib/zabbix/externalscripts:/usr/lib/zabbix/externalscripts:ro
+      - /zabbix-proxy/var/lib/zabbix/modules:/var/lib/zabbix/modules:ro
+      - /zabbix-proxy/var/lib/zabbix/enc:/var/lib/zabbix/enc:ro
+      - /zabbix-proxy/var/lib/zabbix/ssh_keys:/var/lib/zabbix/ssh_keys:ro
+      - /zabbix-proxy/var/lib/zabbix/mibs:/var/lib/zabbix/mibs:ro
+      - /zabbix-proxy/var/lib/zabbix/ssl/certs:/var/lib/zabbix/ssl/certs
+      - /zabbix-proxy/var/lib/zabbix/ssl/keys:/var/lib/zabbix/ssl/keys
+      - /zabbix-proxy/var/lib/zabbix/ssl/ssl_ca:/var/lib/zabbix/ssl/ssl_ca
+      - /zabbix-proxy/var/lib/zabbix/mibs:/usr/share/snmp/mibs:ro
+    environment:
+      - ZBX_PROXYMODE=0
+      - ZBX_SERVER_HOST=noc.itmcloud.com.br
+      - ZBX_SERVER_PORT=10051
+      - ZBX_HOSTNAME= prx-samp-mtz
+      - ZBX_DEBUGLEVEL=3
+      - ZBX_ENABLEREMOTECOMMANDS=1
+      - ZBX_PROXYLOCALBUFFER=6
+      - ZBX_PROXYOFFLINEBUFFER=6
+      - ZBX_PROXYHEARTBEATFREQUENCY=60
+      - ZBX_CONFIGFREQUENCY=3600
+      - ZBX_DATASENDERFREQUENCY=1
+      - ZBX_STARTPOLLERS=20
+      - ZBX_STARTPREPROCESSORS=5
+      - ZBX_STARTPOLLERSUNREACHABLE=30
+      - ZBX_STARTPINGERS=30
+      - ZBX_STARTDISCOVERERS=1
+      - ZBX_STARTHTTPPOLLERS=5
+      - ZBX_HOUSEKEEPINGFREQUENCY=12
+      - ZBX_STARTVMWARECOLLECTORS=1
+      - ZBX_VMWAREFREQUENCY=60
+      - ZBX_VMWAREPERFFREQUENCY=60
+      - ZBX_VMWARECACHESIZE=128M
+      - ZBX_VMWARETIMEOUT=30
+      - ZBX_VMWARECACHESIZE=512M
+      - ZBX_CACHESIZE=512M
+      - ZBX_STARTDBSYNCERS=5
+      - ZBX_HISTORYCACHESIZE=256M
+      - ZBX_HISTORYINDEXCACHESIZE=256M
+      - ZBX_TIMEOUT=30
+      - ZBX_UNREACHABLEPERIOD=45
+      - ZBX_UNAVAILABLEDELAY=60
+      - ZBX_UNREACHABLEDELAY=15
+      - ZBX_LOGSLOWQUERIES=3000
+      - ZBX_STATSALLOWEDIP= 127.0.0.1
+      - ZBX_TLSCONNECT=psk
+      - ZBX_TLSACCEPT=psk
+      - ZBX_TLSPSKIDENTITY= prx-samp-mtz
+      - ZBX_TLSPSKFILE=zabbix_proxy.psk
+      - DB_SERVER_HOST=10.10.1.230
+      - MYSQL_DATABASE=zabbix
+      - MYSQL_USER=zabbix
+      - MYSQL_PASSWORD=carryontech      
+    depends_on:
+      - mysql

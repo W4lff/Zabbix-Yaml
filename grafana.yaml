@@ -1,0 +1,16 @@
+version: '3.8'
+services:
+ grafana:
+  image: grafana/grafana
+  container_name: grafana
+  restart: on-failure
+  ports:
+    - 3000:3000
+  volumes:
+    # Dados persistentes.
+    # sudo mkdir -p /grafana/srv/docker/grafana/data; chown 472:472 /srv/docker/grafana/data
+    #sudo mkdir -p /grafana/srv/docker/grafana/data; chown 472:472 /grafana/srv/docker/grafana/data
+    # docker exec grafana grafana-cli plugins install grafana-clock-panel
+   - /grafana/srv/docker/grafana/data:/var/lib/grafana
+   - /grafana/etc/timezone:/etc/timezone:ro
+   - /grafana/var/lib/grafana/plugins:/var/lib/grafana/plugins
