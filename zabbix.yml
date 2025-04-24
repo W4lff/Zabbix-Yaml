@@ -1,8 +1,23 @@
-version: '3.8'
 services:
+  postgres-server:
+    image: postgres:latest
+    container_name: postgresql-zabbix
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=#Y&g{zDs
+      - POSTGRES_DB=postgres
+      - TZ=America/Sao_Paulo
+    volumes:
+      - /postgresql/postgres/var/lib/postgresql/data:/var/lib/postgresql/data
+    restart: unless-stopped
+    ports: 
+      - 5432:5432
+    networks:
+      zabbix-network:
+
   zabbix-snmptraps:
-    image: zabbix/zabbix-snmptraps:centos-4.4.8
-    comannd: cat >> [hade]
+    image: zabbix/zabbix-snmptraps:alpine-latest
+    container_name: zabbix-snmptraps
     restart: unless-stopped
     ports:
       - 162:1162/udp
@@ -12,13 +27,17 @@ services:
       - /zabbix/zabbix-snmptraps/var/lib/zabbix/mibs:/var/lib/zabbix/mibs
     networks:
       zabbix-network:
+    depends_on:
+      - postgres-server
+
   zabbix-server-pgsql:
-    image: zabbix/zabbix-server-pgsql:centos-4.4.8
+    image: zabbix/zabbix-server-pgsql:alpine-latest
+    container_name: zabbix-server-pgsql
     environment:
-      - DB_SERVER_HOST=10.10.1.25
-      - POSTGRES_USER=zabbix
-      - POSTGRES_PASSWORD=Xe<bLKb!
-      - POSTGRES_DB=zabbix_db
+      - DB_SERVER_HOST=postgresql-zabbix
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=#Y&g{zDs
+      - POSTGRES_DB=postgres
       - ZBX_ENABLE_SNMP_TRAPS=true
       - ZBX_CACHESIZE=1G
       - ZBX_STARTDBSYNCERS=10
@@ -58,55 +77,39 @@ services:
       - /zabbix-server-pgsql/var/lib/zabbix/ssl/ssl_ca:/var/lib/zabbix/ssl/ssl_ca
       - /zabbix-snmptraps/zbx_instance/snmptraps:/var/lib/zabbix/snmptraps:rw
       - /zabbix-snmptraps/var/lib/zabbix/mibs:/usr/share/snmp/mibs:ro
-      - ./config/odbc.ini:/etc/odbc.ini:ro
-    links:
-      - zabbix-server-pgsql
     networks:
       zabbix-network:
+    depends_on:
+      - postgres-server
 
   zabbix-web-nginx-pgsql:
-    image: zabbix/zabbix-web-nginx-pgsql:centos-4.4.8
+    image: zabbix/zabbix-web-nginx-pgsql:alpine-latest
+    container_name: zabbix-web-nginx-pgsql
     restart: unless-stopped
     ports:
       - 443:8443
       - 80:8080
     environment:
       - PHP_TZ=America/Sao_Paulo
-      - /etc/localtime:/etc/localtime:ro
-      - ZBX_SERVER_NAME=ITM-ZBBX
+      - ZBX_SERVER_NAME=Intelli-ZBBX
       - ZBX_SERVER_HOST=zabbix-server-pgsql
-      - DB_SERVER_HOST=10.10.1.25
-      - POSTGRES_USER=zabbix
-      - POSTGRES_PASSWORD=Xe<bLKb!
-      - POSTGRES_DB=zabbix_db
+      - DB_SERVER_HOST=postgresql-zabbix
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=#Y&g{zDs
+      - POSTGRES_DB=postgres
     volumes:
+      - /etc/localtime:/etc/localtime:ro
       - /zabbix-web-nginx/etc/ssl/nginx:/etc/ssl/nginx:ro
       - /zabbix-web-nginx/usr/share/zabbix/modules:/usr/share/zabbix/modules
-    links:
+    networks:
+      zabbix-network:
+    depends_on:
+      - postgres-server
       - zabbix-server-pgsql
-    networks:
-      zabbix-network:
 
-  zabbix-web-apache-pgsql:
-    image: zabbix/zabbix-web-apache-pgsql:centos-4.4.8
-    restart: unless-stopped
-    ports:
-      - 1443:8443
-      - 180:8080
-    environment:
-      - PHP_TZ=America/Sao_Paulo
-      - /etc/localtime:/etc/localtime:ro
-      - ZBX_SERVER_NAME=ITM-ZBBX
-      - ZBX_SERVER_HOST=zabbix-server-pgsql
-      - DB_SERVER_HOST=10.10.1.25
-      - POSTGRES_USER=zabbix
-      - POSTGRES_PASSWORD=Xe<bLKb!
-      - POSTGRES_DB=zabbix_db
-
-    networks:
-      zabbix-network:
-  realcafe-agent:
+  zabbix-agent:
     image: zabbix/zabbix-agent:latest
+    container_name: zabbix-agent
     restart: unless-stopped
     ports:
       - 10050:10050
@@ -120,3 +123,9 @@ services:
       - /zabbix-agent/etc/zabbix/zabbix_agentd.d:/etc/zabbix/zabbix_agentd.d
     networks:
       zabbix-network:
+    depends_on:
+      - zabbix-server-pgsql
+
+networks:
+  zabbix-network:
+    driver: bridge
